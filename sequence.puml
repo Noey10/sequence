@@ -1,0 +1,316 @@
+/' Register '/
+@startuml
+actor User
+
+User -> app_users_templates: กดปุ่มลงทะเบียนเข้าใช้งาน
+activate User
+activate app_users_templates
+app_users_templates -> app_users_views: ส่งคำขอแสดงหน้าลงทะเบียนเข้าใช้งานระบบ
+activate app_users_views
+app_users_views --> app_users_templates: ส่งคืนหน้าลงทะเบียนเข้าใช้งานระบบ
+app_users_templates <-- User: แสดงหน้าลงทะเบียนเข้าใช้งานระบบ
+User -> app_users_templates: กรอกข้อมูลลงทะเบียนและกดปุ่มลงทะเบียน
+deactivate User
+app_users_templates -> app_users_views: ข้อมูลลงทะเบียน
+deactivate app_users_templates
+app_users_views --> app_users_views: ตรวจสอบข้อมูล
+activate app_users_views
+deactivate app_users_views
+alt ข้อมูลถูกต้อง
+app_users_views -> Database: ส่งข้อมูลไปบันทึกลงฐานข้อมูล
+activate Database
+Database --> app_users_views: บันทึกข้อมูลสำเร็จ
+deactivate Database
+app_users_views --> app_users_templates: ส่งคืนข้อความลงทะเบียนสำเร็จ
+activate app_users_templates
+app_users_templates -> User: แสดงข้อความลงทะเบียนสำเร็จ
+activate User
+else ข้อมูลไม่ถูกต้อง
+app_users_views --> app_users_templates: ส่งคืนข้อผิดพลาด
+deactivate app_users_views
+app_users_templates --> User: แสดงข้อผิดพลาด
+deactivate User
+deactivate app_users_templates
+end
+
+@enduml
+
+/' Log in '/
+@startuml
+actor User
+
+app_users_templates --> User: แสดงหน้าล็อกอิน
+activate app_users_templates
+activate User
+User -> app_users_templates: กรอกข้อมูลล็อกอินและกดปุ่มเข้าสู่ระบบ
+app_users_templates -> app_users_views: ส่ง request ขอเข้าสู่ระบบพร้อมกับข้อมูล
+activate app_users_views
+app_users_views -> Database: ตรวจสอบผู้ใช้งาน
+activate Database
+alt การตรวจสอบผู้ใช้ล้มเหลว
+Database --> app_users_views: ตรวจสอบผู้ใช้งานไม่สำเร็จ
+app_users_views --> app_users_templates: ส่งคืนข้อผิดพลาดในการล็อกอิน
+app_users_templates --> User: แสดงข้อผิดพลาดในการล็อกอิน
+else ตรวจสอบผู้ใช้สำเร็จ
+Database --> app_users_views: ตรวจสอบผู้ใช้งานสำเร็จ
+deactivate Database
+app_users_views --> app_users_templates: ส่งคืนหน้าหลัก
+deactivate app_users_views
+app_users_templates --> User: แสดงหน้าหลัก
+deactivate app_users_templates
+deactivate User
+end
+
+@enduml
+
+/' Prediction + View result '/
+@startuml
+actor User
+
+app_general_templates --> User: แสดงหน้าหลัก
+User -> app_general_templates: เลือกเมนูทำนายผล
+app_general_templates -> app_general_views: ส่ง request หน้าทำนายผล
+app_general_views -> app_general_views: ตรวจสอบสิทธิ์ผู้ใช้งาน
+alt User = ผู้ดูแลระบบหรืออาจารย์
+app_general_views -> app_prediction_templates: ส่งคืนหน้าเลือกรูปแบบการทำนาย
+app_prediction_templates --> User: แสดงหน้าเลือการรูปแบบการทำนาย
+alt เลือกทำนายผลรายบุคคล
+app_general_views -> app_prediction_templates: ส่งคืนหน้าแบบฟอร์มการทำนายผลรายบุคคล
+app_prediction_templates --> User: แสดงหน้าแบบฟอร์มการทำนายผลรายบุคคล
+User -> app_prediction_templates: กรอกข้อมูลสำหรับทำนายผล
+app_prediction_templates -> app_prediction_views: ส่ง request ทำนายและข้อมูล
+app_prediction_views -> app_prediction_views: ตรวจสอบข้อมูล
+app_prediction_views -> Database: ขอข้อมูลสำหรับ Train model
+Database -> Database: ค้นหาข้อมูลสำหรับ Train model
+app_prediction_views -> sk_learn: ส่งข้อมูลไปเพื่อทำนายผล
+sk_learn -> sk_learn: ทำนายผล
+sk_learn --> app_prediction_views: ส่งคืนผลการทำนาย
+app_prediction_views --> app_prediction_templates: ส่งคืนผลการทำนาย
+app_prediction_templates --> User: แสดงผลการทำนาย
+else เลือกการทำนายแบบกลุ่ม
+app_general_views -> app_prediction_templates: ส่งคืนหน้าแบบฟอร์มการทำนายผลแบบกลุ่ม
+app_prediction_templates --> User: แสดงหน้าแบบฟอร์มการทำนายผลแบบกลุ่ม
+User -> app_prediction_templates: เลือกสาขาและอัปโหลดไฟลืข้อมูล
+app_prediction_templates -> app_prediction_views: ส่ง request ทำนายและข้อมูล
+app_prediction_views -> app_prediction_views: ตรวจสอบข้อมูล
+app_prediction_views -> Database: ขอข้อมูลสำหรับ Train model
+Database -> Database: ค้นหาข้อมูลสำหรับ Train model
+app_prediction_views -> sk_learn: ส่งข้อมูลไปเพื่อทำนายผล
+sk_learn -> sk_learn: ทำนายผล
+sk_learn --> app_prediction_views: ส่งคืนผลการทำนาย
+app_prediction_views --> app_prediction_templates: ส่งคืนผลการทำนาย
+app_prediction_templates --> User: แสดงผลการทำนาย
+end
+else User = ผู้ใช้งานระบบ 
+app_general_views -> app_prediction_templates: ส่งคืนหน้าแบบฟอร์มการทำนายผลรายบุคคล
+app_prediction_templates --> User: แสดงหน้าแบบฟอร์มการทำนายผลรายบุคคล
+User -> app_prediction_templates: กรอกข้อมูลสำหรับทำนายผล
+app_prediction_templates -> app_prediction_views: ส่ง request ทำนายและข้อมูล
+app_prediction_views -> app_prediction_views: ตรวจสอบข้อมูล
+app_prediction_views -> Database: ขอข้อมูลสำหรับ Train model
+Database -> Database: ค้นหาข้อมูลสำหรับ Train model
+app_prediction_views -> sk_learn: ส่งข้อมูลไปเพื่อทำนายผล
+sk_learn -> sk_learn: ทำนายผล
+sk_learn --> app_prediction_views: ส่งคืนผลการทำนาย
+app_prediction_views --> app_prediction_templates: ส่งคืนผลการทำนาย
+app_prediction_templates --> User: แสดงผลการทำนาย
+end
+
+@enduml
+
+/' History '/
+@startuml
+actor User
+
+app_general_templates --> User: แสดงหน้าหลัก
+User -> app_general_templates: เลือกเมนูประวัติการทำนาย
+app_general_templates -> app_users_views: ส่ง request ขอหน้าประวัติการทำนาย
+app_users_views -> Database: ขอข้อมูลประวัติการทำนายของผู้ใช้งาน
+Database -> Database: ค้นหาข้อมูล
+Database --> app_users_views: ส่งคืนข้อมูล
+app_users_views --> app_users_templates: ส่งคืนข้อมูลประวัติการทำนาย
+app_users_templates --> User: แสดงประวัติการทำนาย
+
+@enduml
+
+/' Manage Profile '/
+@startuml
+actor User
+
+app_general_templates --> User: แสดงหน้าหลัก
+User -> app_general_templates: กดปุ่มไอคอนผู้ใช้งาน
+app_general_templates -> app_users_views: ส่ง request ขอหน้าแสดงข้อมูลผู้ใช้งาน
+app_users_views -> Database: ขอข้อมูลผู้ใช้งาน
+Database -> Database: ค้นหาข้อมูลผู้ใช้
+Database --> app_users_views: ส่งคืนข้อมูลผู้ใช้งาน
+app_users_views --> app_users_templates: ส่งคืนข้อมูลผู้ใช้งาน
+app_users_templates --> User: แสดงข้อมูลผู้ใช้งาน
+alt เปลี่ยนรหัสผ่าน
+User -> app_users_templates: ผู้ใช้งานกดปุ่มเปลี่ยนรหัสผ่าน
+app_users_templates -> app_users_views: ส่ง request ขอหน้าแบบฟอร์อมเปลี่ยนรหัสผ่าน
+app_users_views --> app_users_templates: ส่งคืนหน้าแบบฟอร์อมเปลี่ยนรหัสผ่าน
+app_users_templates --> User: แสดงหน้าแบบฟอร์มเปลี่ยนรหัสผ่าน
+User -> app_users_templates: กรอกรหัสผ่านเก่าและรหัสผ่านใหม่
+app_users_templates -> app_users_views: ส่งรหัสผ่านเก่าและรหัสผ่านใหม่
+app_users_views -> Database: ส่งรหัสผ่านเก่าไปค้นหาในฐานข้อมูล
+Database -> Database: ค้นหารหัสผ่าน
+Database --> app_users_views: ส่งคืนรหัสผ่าน
+app_users_views -> app_users_views: ตรวจสอบรหัสผ่านเก่า
+alt รหัสผ่านเก่าไม่ถูกต้อง
+app_users_views --> app_users_templates: ส่งคืนข้อผิดพลาด
+app_users_templates --> User: แสดงข้อผิดพลาด
+else รหัสผ่านเก่าถูกต้อง
+app_users_views -> Database: ส่งรหัสผ่านใหม่
+Database -> Database: ลบรหัสผ่านเก่าและบันทึกข้อมูลใหม่
+Database --> app_users_views: บันทึกข้อมูลสำเร็จ
+app_users_views --> app_users_templates: ส่งคืนข้อความเปลี่ยนรหัสผ่านสำเร็จ
+app_users_templates --> User: แสดงข้อความเปลี่ยนรหัสผ่านสำเร็จ
+end
+else แก้ไขข้อมูลส่วนตัว
+User -> app_users_templates: ผู้ใช้งานกดปุ่มแก้ไขข้อมูลส่วนตัว
+app_users_templates -> app_users_views: ส่ง request ขอหน้าแก้ไขข้อมูลส่วนตัว
+app_users_views -> Database: ส่งคำขอข้อมูลผู้ใช้งาน
+Database -> Database: ค้นหาข้อมูลผู้ใช้งาน
+Database --> app_users_views: ส่งคืนข้อมูลผู้ใช้งาน
+app_users_views --> app_users_templates: ส่งคืนข้อมูลผู้ใช้งาน
+app_users_templates --> User: แสดงหน้าแบบฟอร์มแก้ไขข้อมูลส่วนตัวพร้อมข้อมูล
+User -> app_users_templates: แก้ไขข้อมูลที่ต้องการ
+app_users_templates -> app_users_views: ส่งข้อมูลที่ผู้ใช้งานกรอก
+app_users_views -> app_users_views: ตรวจสอบข้อมูล
+alt ข้อมูลถูกต้อง
+app_users_views -> Database: ส่งข้อมูลไปบันทึกยังฐานข้อมูล
+Database --> app_users_views: บันทึกข้อมูลสำเร็จ
+app_users_views --> app_users_templates: ส่งคืนข้อความแก้ไขข้อมูลสำเร็จ
+app_users_templates --> User: แสดงข้อความแก้ไขข้อมูลสำเร็จ
+else ข้อมูลไม่ถูกต้อง
+app_users_views --> app_users_templates: ส่งคืนข้อผิดพลาด
+app_users_templates --> User: แสดงข้อผิดพลาด
+end
+end
+@enduml
+
+/' View data prediction '/
+@startuml
+actor User
+
+app_general_templates --> User: แสดงหน้าหลัก
+User -> app_general_templates: เลือกเมนูดุข้อมูลการทำนาย
+app_general_templates -> app_prediction_views: ส่ง request ขอหน้าแสดงข้อมูลการทำนาย
+app_prediction_views -> app_prediction_views: ตรวจสอบสิทธิ์ผู้ใช้งาน
+alt ผู้ใช้งานเป็น Admin
+app_prediction_views -> Database: ส่งคำขอข้อมูลการทำนาย
+Database --> app_prediction_views: ส่งคืนข้อมูลการทำนายทั้งหมด
+app_prediction_views -> app_prediction_templates: ส่งคืนข้อมูลการทำนาย
+app_prediction_templates --> User: แสดงข้อมูลการทำนาย
+else ผู้ใช้งานเป็น Teacher 
+app_prediction_views -> Database: ส่งคำขอข้อมูลการทำนายในสาขาของ Teacher
+Database -> Database: ค้นหาข้อมูลการทำนาย
+Database --> app_prediction_views: ส่งคืนข้อมูลการทำนาย
+app_prediction_views -> app_prediction_templates: ส่งคืนข้อมูลการทำนาย
+app_prediction_templates --> User: แสดงข้อมูลการทำนาย
+end
+@enduml
+
+/' Dashboard '/
+@startuml
+actor User
+User -> app_general_views: เข้าสู่ระบบสำเร็จ
+app_general_views -> app_general_views: ตรวจสอบสิทธิ์ผู้ใช้งาน
+alt User = Teacher
+app_general_views -> Database: ส่งคำขอข้อมูลการทำนาย
+Database -> Database: ค้นหาข้อมูลการทำนายด้วยไอดีสาขาของอาจารย์
+Database --> app_general_views: ส่งคืนข้อมูลการทำนาย
+app_general_views --> app_general_templates: ส่งคืนข้อมูลการทำนาย
+app_general_templates --> User: แสดงข้อมูลการทำนายในรูปแบบของกราฟ
+else User = Admin
+app_general_views -> Database: ส่งคำขอข้อมูลการทำนายทั้งหมดในระบบ
+Database --> app_general_views: ส่งคืนข้อมูลการทำนาย
+app_general_views --> app_general_templates: ส่งคืนข้อมูลการทำนาย
+app_general_templates --> User: แสดงข้อมูลการทำนายในรูปแบบของกราฟ
+end
+@enduml
+
+/' View training data '/
+@startuml
+actor User
+
+app_general_templates --> User: แสดงหน้าหลัก
+User -> app_general_templates: เลือกเมนูข้อมูลสำหรับสร้างโมเดล
+app_general_templates -> app_demo_model_views: ส่ง request ขอหน้าข้อมูลสำหรับสร้างโมเดล
+app_demo_model_views -> app_demo_model_views: ตรวจสอบสิทธิ์ผู้ใช้งาน
+alt User = Admin
+app_demo_model_views -> Database: ขอข้อมูลสำหรับสร้างโมเดลทั้งหมด
+Database --> app_demo_model_views: ส่งคืนข้อมูลสำหรับสร้างโมเดล
+app_demo_model_views --> app_demo_model_templates: ส่งคืนข้อมูลสำหรับสร้างโมเดล
+app_demo_model_templates --> User: แสดงข้อมูลสำหรับสร้างโมเดล
+else User = Teacher
+app_demo_model_views -> Database: ขอข้อมูลสำหรับสร้างโมเดล
+Database -> Database: ค้นหาข้อมูลสำหรับสร้างโมเดลด้วยสาขาของอาจารย์
+Database --> app_demo_model_views: ส่งคืนข้อมูลสำหรับสร้างโมเดล
+app_demo_model_views --> app_demo_model_templates: ส่งคืนข้อมูลสำหรับสร้างโมเดล
+app_demo_model_templates --> User: แสดงข้อมูลสำหรับสร้างโมเดล
+else User = ผู้ใช้งานทั่วไป
+app_demo_model_views --> app_demo_model_templates: ส่งคืนข้อผิดพลาด
+app_demo_model_templates --> User: แสดงหน้า error
+end
+@enduml
+
+/' manage teacher '/
+@startuml
+actor Admin
+
+app_general_templates --> Admin: แสดงหน้าหลัก
+Admin -> app_general_templates: เลือกเมนูจัดการอาจารย์
+app_general_templates -> app_users_views: ส่ง request ขอหน้าแสดงข้อมูลอาจารย์
+app_users_views -> Database: ส่งคำขอข้อมูลผุ้ใช้งานที่เป็นอาจารย์
+Database -> Database: ค้นหาข้อมูลผู้ใช้งานที่มีสถานะอาจารย์
+Database -> app_users_views: ส่งคืนข้อมูลผู้ใช้งานที่มีสถานะอาจารย์
+app_users_views --> app_users_templates: ส่งคืนข้อมูลอาจารย์
+app_users_templates --> Admin: แสดงหน้าข้อมูลอาจารย์
+
+Admin -> app_users_templates: กดปุ่มเพิ่มข้อมูลอาจารย์
+app_users_templates -> app_users_views: ส่ง request ขอหน้าแบบฟอร์มเพิ่มข้อมูลอาจารย์
+app_users_views --> app_users_templates: ส่งคืนหน้าแบบฟอร์มเพิ่มข้อมูลอาจารย์
+app_users_templates --> Admin: แสดงหน้าแบบฟอร์มเพิ่มข้อมูลอาจารย์
+Admin -> app_users_templates: กรอกข้อมูลอาจารย์
+app_users_templates -> app_users_views: ข้อมูลอาจารย์
+app_users_views -> app_users_views: ตรวจสอบข้อมูล
+alt ข้อมูลถูกต้อง
+app_users_views -> Database: ส่งข้อมูลไปบันทึกในฐานข้อมูล
+Database --> app_users_views: ส่งคืนข้อมูลอาจารย์
+app_users_views --> app_users_templates: ส่งคืนข้อมูลอาจารย์
+app_users_templates --> Admin: แสดงข้อมูลอาจารย์
+else ข้อมูลไม่ถูกต้อง
+app_users_views --> app_users_templates: ส่งคืนข้อผิดพลาด
+app_users_templates --> Admin: แสดงข้อผิดพลาด
+end
+
+Admin -> app_users_templates: กดปุ่มแก้ไขข้อมูลอาจารย์
+app_users_templates -> app_users_views: ส่ง request ขอหน้าแบบฟอร์มแก้ไขข้อมูลอาจารย์
+app_users_views -> Database: ส่งคำขอข้อมูลผู้ใช้งาน
+Database -> Database: ค้นหาข้อมูลผู้ใช้งาน
+Database --> app_users_views: ส่งคืนข้อมูลผู้ใช้งาน
+app_users_views --> app_users_templates: ส่งคืนข้อมูลผู้ใช้งาน
+app_users_templates --> Admin: แสดงหน้าแบบฟอร์มแก้ไขข้อมูลพร้อมกับข้อมูลผู้ใช้งาน
+Admin -> app_users_templates: กรอกข้อมูลที่ต้องการแก้ไข
+app_users_templates -> app_users_views: ข้อมูลผู้ใช้งาน
+app_users_views -> app_users_views: ตรวจสอบข้อมูล
+alt ข้อมูลถูกต้อง
+app_users_views -> Database: ส่งข้อมูลใหม่ไปบันทึกในฐานข้อมูล
+Database --> app_users_views: ส่งคืนข้อมูลอาจารย์
+app_users_views --> app_users_templates: ส่งคืนข้อมูลอาจารย์
+app_users_templates --> Admin: แสดงข้อมูลอาจารย์
+else ข้อมูลไม่ถูกต้อง
+app_users_views --> app_users_templates: ส่งคืนข้อผิดพลาด
+app_users_templates --> Admin: แสดงข้อผิดพลาด
+end
+
+Admin -> app_users_templates: กดปุ่มลบข้อมูลอาจารย์
+app_users_templates -> app_users_views: ส่ง request ขอลบข้อมูล
+app_users_views -> Database: ส่งข้อมูลไปค้นหาในฐานข้อมูล
+Database -> Database: ลบข้อมูลผู้ใช้งาน
+Database --> app_users_views: ส่งคืนข้อมูลอาจารย์
+app_users_views --> app_users_templates: ส่งคืนข้อมูลอาจารย์
+app_users_templates --> Admin: แสดงข้อมูลอาจารย์
+
+@enduml
